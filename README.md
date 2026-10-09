@@ -4,9 +4,18 @@ Polls the [Tautulli](https://tautulli.com) API and writes Plex usage and streami
 InfluxDB line protocol: what is playing right now, how it is being delivered, whether hardware
 transcoding is doing its job, lifetime plays and watch time per library and, optionally, per user.
 
+**Designed to work with InfluxDB 1.x, InfluxDB 2.x and VictoriaMetrics**, writing the same data to
+each:
+
+| Store | How it writes | Configure with |
+|---|---|---|
+| InfluxDB 1.x | `POST /write?db=…` | `INFLUXDB_URL`, `INFLUXDB_DATABASE`, optional `INFLUXDB_USERNAME`/`INFLUXDB_PASSWORD` |
+| InfluxDB 2.x | `POST /api/v2/write?org=…&bucket=…` with an API token | `INFLUXDB_URL`, `INFLUXDB_TOKEN`, `INFLUXDB_ORG`, `INFLUXDB_BUCKET` |
+| VictoriaMetrics | `POST /write?db=…`. The database name becomes a `db` label. | `INFLUXDB_URL` (port 8428), `INFLUXDB_DATABASE` |
+
+All three have been tested against a live Tautulli 2.18.
+
 - **One small container, no dependencies.** Python standard library only.
-- **Writes to anything that accepts InfluxDB v1 `/write`.** Tested with InfluxDB 1.8 and with
-  VictoriaMetrics behind an nginx relay that mirrors writes to both.
 - **Numeric fields only.** Every value is an integer except one float, so the data also works in
   VictoriaMetrics, which cannot store strings.
 - **Per-user metrics are off by default.** They put usernames into your metrics database, so you
@@ -28,10 +37,24 @@ docker run -d --name tautulli-exporter --restart unless-stopped \
 
 The Tautulli API key is under **Settings → Web Interface → API key**.
 
-The database must already exist; the exporter does not create it. For InfluxDB 1.x:
+For VictoriaMetrics, point `INFLUXDB_URL` at it (`http://victoriametrics:8428`); no database needs
+creating. For InfluxDB 1.x, create the database first:
 
 ```sh
 curl -XPOST http://influxdb:8086/query --data-urlencode 'q=CREATE DATABASE "tautulli"'
+```
+
+InfluxDB 2.x (create the bucket first; the token needs write access to it):
+
+```sh
+docker run -d --name tautulli-exporter --restart unless-stopped \
+  -e TAUTULLI_URL=http://tautulli:8181 \
+  -e TAUTULLI_API_KEY=your-api-key \
+  -e INFLUXDB_URL=http://influxdb2:8086 \
+  -e INFLUXDB_TOKEN=your-api-token \
+  -e INFLUXDB_ORG=your-org \
+  -e INFLUXDB_BUCKET=tautulli \
+  ghcr.io/clara-j/tautulliexporter:latest
 ```
 
 ### Image tags
@@ -81,10 +104,12 @@ Everything is set by environment variable.
 | `TAUTULLI_URL` | *required* | Base URL of Tautulli, including any base path, e.g. `http://tautulli:8181` or `https://example.com/tautulli`. |
 | `TAUTULLI_API_KEY` | *required* | Tautulli API key. It is never logged. |
 | `TAUTULLI_VERIFY_SSL` | `true` | Set `false` to accept a self-signed certificate on an `https` Tautulli. |
-| `INFLUXDB_URL` | *required* | Base URL of the write endpoint, e.g. `http://influxdb:8086`. The exporter POSTs to `<url>/write?db=<database>&precision=ms`. |
-| `INFLUXDB_DATABASE` | `tautulli` | Database to write to. VictoriaMetrics turns it into a `db` label. |
-| `INFLUXDB_USERNAME` | *(none)* | Optional. When set, sent as HTTP basic auth along with the password. |
-| `INFLUXDB_PASSWORD` | *(none)* | Optional. |
+| `INFLUXDB_URL` | *required* | Base URL of InfluxDB or VictoriaMetrics, e.g. `http://influxdb:8086`. |
+| `INFLUXDB_DATABASE` | `tautulli` | InfluxDB 1.x database. In VictoriaMetrics it becomes the `db` label. |
+| `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD` | *(none)* | InfluxDB 1.x credentials, sent as HTTP basic auth. Optional. |
+| `INFLUXDB_TOKEN` | *(none)* | InfluxDB 2.x API token. Setting it switches to the InfluxDB 2 write API. |
+| `INFLUXDB_ORG` | *(none)* | InfluxDB 2.x organization. Required with `INFLUXDB_TOKEN`. |
+| `INFLUXDB_BUCKET` | `INFLUXDB_DATABASE` | InfluxDB 2.x bucket. |
 | `INTERVAL` | `30` | Seconds between polls of live activity. |
 | `STATS_INTERVAL` | `300` | Seconds between polls of lifetime totals (library and user plays, server info). |
 | `PER_USER_METRICS` | `false` | `true` adds the per-user measurements described below. |
@@ -258,12 +283,41 @@ tautulli_sessions_sw_video_transcode > 0
 tautulli_sessions_min_transcode_speed < 1
 ```
 
-InfluxQL:
+InfluxQL (InfluxDB 1.x):
 
 ```sql
 SELECT last("streams") FROM "tautulli_sessions_by_platform" WHERE $timeFilter GROUP BY time($__interval), "platform"
 SELECT non_negative_difference(last("plays")) FROM "tautulli_user_stats" WHERE $timeFilter GROUP BY time(1d), "friendly_name"
 ```
+
+Flux (InfluxDB 2.x):
+
+```flux
+from(bucket: "tautulli")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == "tautulli_sessions" and r._field == "sw_video_transcode")
+  |> last()
+```
+
+## Grafana dashboard
+
+[`grafana/tautulli-dashboard.json`](grafana/tautulli-dashboard.json) is a sample dashboard for
+VictoriaMetrics or Prometheus data sources. Import it under **Dashboards → New → Import**, then use
+the two fields at the top:
+
+- **Data source:** your VictoriaMetrics or Prometheus data source.
+- **db label:** the exporter's `INFLUXDB_DATABASE`, `tautulli` by default.
+
+It has four rows:
+- **Now:** streams, transcodes, bandwidth, software-transcode alarm, Plex up, update waiting.
+- **Streams:** delivery type, LAN/WAN bandwidth, transcode detail, slowest transcode speed,
+  platform, quality profile, stream state.
+- **Libraries:** items, plays and hours watched in the selected time range.
+- **Users:** needs `PER_USER_METRICS=true`. Who is streaming, plays and hours per user, lifetime
+  plays, days since last seen, and plays by media type and stream type.
+
+Panels about current streams are empty while nobody is watching. The per-user breakdowns update
+hourly.
 
 ## Load and cardinality
 
@@ -286,8 +340,9 @@ One line per event, written to stdout:
 - an `INFO` line when a job recovers;
 - an hourly `INFO` summary of runs per job.
 
-The API key is never logged: it is masked in error messages, and it is passed by environment
-variable, not command-line argument, so it does not show in `ps` either.
+The API key and the InfluxDB token are never logged. Both are passed by environment variable, not
+command-line argument, so neither shows in `ps`. The API key is masked in error messages; the token
+never appears in one, because it is sent in a header rather than the URL.
 
 ## Releases
 

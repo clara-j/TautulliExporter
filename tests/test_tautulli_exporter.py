@@ -310,6 +310,13 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaises(te.ConfigError):
                 config(INTERVAL=bad)
 
+    def test_influxdb2(self):
+        c = config(INFLUXDB_TOKEN="t0k", INFLUXDB_ORG="home")
+        self.assertEqual((c.influxdb_org, c.influxdb_bucket), ("home", "tautulli"))
+        self.assertEqual(config(INFLUXDB_TOKEN="t", INFLUXDB_ORG="o", INFLUXDB_BUCKET="b").influxdb_bucket, "b")
+        with self.assertRaises(te.ConfigError):
+            config(INFLUXDB_TOKEN="t0k")
+
     def test_main_exits_2_on_bad_config(self):
         self.assertEqual(te.main(["--once"], env={}), 2)
 
@@ -379,6 +386,12 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(path, "/write?db=plex+test&precision=ms")
         self.assertEqual(data, "m v=1i 1\nm v=2i 2")
         self.assertEqual(auth, "Basic dXNlcjpwdw==")
+
+    def test_influxdb2_write(self):
+        te.InfluxWriter(self.url, "tautulli", token="t0k", org="home", bucket="plex").write(["m v=1i 1"])
+        method, path, _, data, auth = StubHandler.requests[0]
+        self.assertEqual(path, "/api/v2/write?org=home&bucket=plex&precision=ms")
+        self.assertEqual((data, auth), ("m v=1i 1", "Token t0k"))
 
     def test_influx_error_raises_with_detail(self):
         with self.assertRaises(te.InfluxError) as ctx:

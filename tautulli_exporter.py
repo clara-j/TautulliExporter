@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Export Tautulli (Plex) metrics to InfluxDB v1 line protocol.
+"""Export Tautulli (Plex) metrics as InfluxDB line protocol.
 
-Polls the Tautulli API and writes to any endpoint that accepts InfluxDB v1
-`/write` requests: InfluxDB 1.x, VictoriaMetrics, or InfluxDB 2.x through its
-v1 compatibility API. Standard library only. Configuration is by environment
-variable; see README.md.
+Polls the Tautulli API and writes to InfluxDB 1.x (`/write`), InfluxDB 2.x
+(`/api/v2/write` with a token) or VictoriaMetrics (`/write`). Standard library
+only. Configuration is by environment variable; see README.md.
 """
 import argparse
 import base64
@@ -20,7 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 REQUEST_TIMEOUT_SECONDS = 10
 SUMMARY_EVERY_SECONDS = 3600
@@ -53,6 +52,12 @@ class Config:
         self.influxdb_database = env.get("INFLUXDB_DATABASE") or "tautulli"
         self.influxdb_username = env.get("INFLUXDB_USERNAME", "")
         self.influxdb_password = env.get("INFLUXDB_PASSWORD", "")
+        # InfluxDB 2.x: a token switches to the v2 write API
+        self.influxdb_token = env.get("INFLUXDB_TOKEN", "")
+        self.influxdb_org = env.get("INFLUXDB_ORG", "")
+        self.influxdb_bucket = env.get("INFLUXDB_BUCKET") or self.influxdb_database
+        if self.influxdb_token and not self.influxdb_org:
+            raise ConfigError("INFLUXDB_ORG is required when INFLUXDB_TOKEN is set")
         self.interval = _env_int(env, "INTERVAL", 30)
         self.stats_interval = _env_int(env, "STATS_INTERVAL", 300)
         self.user_breakdown_interval = _env_int(env, "USER_BREAKDOWN_INTERVAL", 3600)
@@ -118,9 +123,16 @@ class TautulliClient:
 
 
 class InfluxWriter:
-    def __init__(self, url, database, username="", password=""):
-        self.url = "{0}/write?{1}".format(url, urllib.parse.urlencode({"db": database, "precision": "ms"}))
+    """InfluxDB 1.x / VictoriaMetrics `/write`, or with a token InfluxDB 2.x `/api/v2/write`."""
+
+    def __init__(self, url, database, username="", password="", token="", org="", bucket=""):
         self.auth = None
+        if token:
+            query = urllib.parse.urlencode({"org": org, "bucket": bucket or database, "precision": "ms"})
+            self.url = "{0}/api/v2/write?{1}".format(url, query)
+            self.auth = "Token " + token
+            return
+        self.url = "{0}/write?{1}".format(url, urllib.parse.urlencode({"db": database, "precision": "ms"}))
         if username:
             token = "{0}:{1}".format(username, password).encode()
             self.auth = "Basic " + base64.b64encode(token).decode()
@@ -548,14 +560,17 @@ def main(argv=None, env=None):
         return 2
 
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-    log.info("starting %s: tautulli=%s influxdb=%s db=%s interval=%ds stats=%ds per_user=%s%s",
-             __version__, config.tautulli_url, config.influxdb_url, config.influxdb_database,
+    target = ("bucket={0} org={1} (InfluxDB 2 API)".format(config.influxdb_bucket, config.influxdb_org)
+              if config.influxdb_token else "db={0}".format(config.influxdb_database))
+    log.info("starting %s: tautulli=%s influxdb=%s %s interval=%ds stats=%ds per_user=%s%s",
+             __version__, config.tautulli_url, config.influxdb_url, target,
              config.interval, config.stats_interval, config.per_user_metrics,
              " user_breakdown={0}s".format(config.user_breakdown_interval) if config.per_user_metrics else "")
     exporter = Exporter(config,
                         TautulliClient(config.tautulli_url, config.tautulli_api_key, config.tautulli_verify_ssl),
                         InfluxWriter(config.influxdb_url, config.influxdb_database,
-                                     config.influxdb_username, config.influxdb_password))
+                                     config.influxdb_username, config.influxdb_password,
+                                     config.influxdb_token, config.influxdb_org, config.influxdb_bucket))
     return exporter.run(once=args.once)
 
 
