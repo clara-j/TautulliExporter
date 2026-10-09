@@ -122,7 +122,7 @@ exporter at startup with a message, rather than being silently read as one or th
 ### Command line
 
 ```
-python tautulli_exporter.py [--once] [--log-level LEVEL] [--version]
+python tautulli_exporter.py [--once] [--healthcheck] [--log-level LEVEL] [--version]
 ```
 
 `--once` runs every job a single time and exits: `0` if all succeeded, `1` if any failed.
@@ -299,14 +299,17 @@ from(bucket: "tautulli")
   |> last()
 ```
 
-## Grafana dashboard
+## Grafana dashboards
 
-[`grafana/tautulli-dashboard.json`](grafana/tautulli-dashboard.json) is a sample dashboard for
-VictoriaMetrics or Prometheus data sources. Import it under **Dashboards → New → Import**, then use
-the two fields at the top:
+Three versions of one sample dashboard, with the same panels in each store's query language:
 
-- **Data source:** your VictoriaMetrics or Prometheus data source.
-- **db label:** the exporter's `INFLUXDB_DATABASE`, `tautulli` by default.
+| File | Data source | Settings at the top of the dashboard |
+|---|---|---|
+| [`grafana/tautulli-victoriametrics.json`](grafana/tautulli-victoriametrics.json) | VictoriaMetrics or Prometheus (PromQL) | **Data source**, and **db label**: the exporter's `INFLUXDB_DATABASE` (`tautulli` by default) |
+| [`grafana/tautulli-influxdb1.json`](grafana/tautulli-influxdb1.json) | InfluxDB 1.x (InfluxQL) | **Data source**: an InfluxQL data source whose database is the exporter's `INFLUXDB_DATABASE` |
+| [`grafana/tautulli-influxdb2.json`](grafana/tautulli-influxdb2.json) | InfluxDB 2.x (Flux) | **Data source**: a Flux data source, and **Bucket**: the exporter's `INFLUXDB_BUCKET` (`tautulli` by default) |
+
+Import one under **Dashboards → New → Import**, then pick the data source at the top.
 
 It has four rows:
 - **Now:** streams, transcodes, bandwidth, software-transcode alarm, Plex up, update waiting.
@@ -314,10 +317,46 @@ It has four rows:
   platform, quality profile, stream state.
 - **Libraries:** items, plays and hours watched in the selected time range.
 - **Users:** needs `PER_USER_METRICS=true`. Who is streaming, plays and hours per user, lifetime
-  plays, days since last seen, and plays by media type and stream type.
+  plays, when each user was last seen, and plays by media type and stream type.
 
 Panels about current streams are empty while nobody is watching. The per-user breakdowns update
 hourly.
+
+The InfluxDB versions differ in two small ways:
+- **Elapsed times show as dates.** InfluxQL cannot do arithmetic with the current time, so
+  "days since" values show as "3 days ago" instead.
+- **Short top-10 lists are tables** rather than bar charts.
+
+## Health check
+
+The image has a Docker `HEALTHCHECK`, so `docker ps`, Portainer, Homepage and similar tools show
+the container as `healthy` or `unhealthy`.
+
+The container is **healthy while the activity job (every `INTERVAL`) has written successfully within the last 3 × `INTERVAL`
+seconds**: 90 seconds at the default `INTERVAL` of 30. A plain "is the process running" check would
+not be enough here, because the exporter deliberately keeps running when Tautulli or the
+database is unreachable, logging each failed cycle and retrying.
+
+How it works:
+
+- After each successful write, the exporter stamps a small heartbeat file in `/tmp`, and it removes
+  that file at startup so a stamp from before a restart cannot count.
+- Docker runs `python tautulli_exporter.py --healthcheck` every 30 seconds (60-second start period, 2
+  retries). It exits `0` when the heartbeat is recent enough and `1` otherwise, printing why. Run
+  `docker inspect --format '{{json .State.Health}}' <container>` to see that output.
+- It reads only `INTERVAL`, so it works without the other settings.
+
+Docker only reports the status: it does not restart an unhealthy container, and almost every
+failure is upstream anyway, so a restart would not fix it. For alerts, use your monitoring stack,
+for example an alert when the exporter's series stop arriving.
+
+To change the timings, override them in Compose:
+
+```yaml
+    healthcheck:
+      interval: 60s
+      start_period: 120s
+```
 
 ## Load and cardinality
 

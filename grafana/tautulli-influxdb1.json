@@ -1,7 +1,7 @@
 {
-  "uid": "tautulli-exporter",
-  "title": "Tautulli Exporter",
-  "description": "Sample dashboard for TautulliExporter (https://github.com/clara-j/TautulliExporter). VictoriaMetrics / Prometheus queries. Set the db field to the exporter's INFLUXDB_DATABASE. The Users row needs PER_USER_METRICS=true.",
+  "uid": "tautulli-exporter-influxdb1",
+  "title": "Tautulli Exporter (InfluxDB 1.x)",
+  "description": "Sample dashboard for TautulliExporter (https://github.com/clara-j/TautulliExporter), InfluxDB 1.x queries. Pick the InfluxQL data source whose database is the exporter's INFLUXDB_DATABASE. The Users row needs PER_USER_METRICS=true.",
   "tags": [
     "tautulli",
     "plex"
@@ -26,24 +26,12 @@
         "type": "datasource",
         "name": "datasource",
         "label": "Data source",
-        "query": "prometheus",
+        "query": "influxdb",
         "current": {},
         "hide": 0,
         "refresh": 1,
         "regex": "",
         "options": []
-      },
-      {
-        "type": "textbox",
-        "name": "db",
-        "label": "db label",
-        "description": "The exporter's INFLUXDB_DATABASE, which VictoriaMetrics stores as the db label",
-        "query": "tautulli",
-        "current": {
-          "text": "tautulli",
-          "value": "tautulli"
-        },
-        "hide": 0
       }
     ]
   },
@@ -66,7 +54,7 @@
       "title": "Streams",
       "id": 2,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -107,14 +95,13 @@
       },
       "targets": [
         {
-          "expr": "get_activity_stream_count{db=\"$db\"}",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"stream_count\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "stream_count",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -125,7 +112,7 @@
       "title": "Transcoding",
       "id": 3,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -166,14 +153,13 @@
       },
       "targets": [
         {
-          "expr": "get_activity_stream_transcode_count{db=\"$db\"}",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"stream_transcode_count\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "stream_transcode_count",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -184,7 +170,7 @@
       "title": "Bandwidth",
       "id": 4,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -226,14 +212,13 @@
       },
       "targets": [
         {
-          "expr": "get_activity_total_bandwidth{db=\"$db\"}",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"total_bandwidth\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "total_bandwidth",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -244,7 +229,7 @@
       "title": "Software transcodes",
       "id": 5,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -289,14 +274,13 @@
       },
       "targets": [
         {
-          "expr": "tautulli_sessions_sw_video_transcode{db=\"$db\"}",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"sw_video_transcode\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "sw_video_transcode",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -308,7 +292,7 @@
       "title": "Plex",
       "id": 6,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -366,14 +350,13 @@
       },
       "targets": [
         {
-          "expr": "tautulli_server_plex_connected{db=\"$db\"}",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"plex_connected\") FROM \"tautulli_server\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "plex_connected",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -385,7 +368,7 @@
       "title": "Plex update",
       "id": 7,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -443,14 +426,13 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(tautulli_server_update_available{db=\"$db\"}[15m])",
-          "legendFormat": "__auto",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"update_available\") FROM \"tautulli_server\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "update_available",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -474,7 +456,7 @@
       "title": "Streams by delivery",
       "id": 9,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -500,7 +482,6 @@
               "mode": "normal",
               "group": "A"
             },
-            "drawStyle": "line",
             "fillOpacity": 10,
             "lineWidth": 1,
             "showPoints": "never",
@@ -523,38 +504,35 @@
       },
       "targets": [
         {
-          "expr": "get_activity_stream_directplay_count{db=\"$db\"}",
-          "legendFormat": "Direct play",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"stream_directplay_count\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Direct play",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "get_activity_stream_directstream_count{db=\"$db\"}",
-          "legendFormat": "Direct stream",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"stream_directstream_count\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Direct stream",
           "refId": "B",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "get_activity_stream_transcode_count{db=\"$db\"}",
-          "legendFormat": "Transcode",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"stream_transcode_count\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Transcode",
           "refId": "C",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -565,7 +543,7 @@
       "title": "Bandwidth",
       "id": 10,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -613,26 +591,24 @@
       },
       "targets": [
         {
-          "expr": "get_activity_lan_bandwidth{db=\"$db\"}",
-          "legendFormat": "LAN",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"lan_bandwidth\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "LAN",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "get_activity_wan_bandwidth{db=\"$db\"}",
-          "legendFormat": "WAN",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"wan_bandwidth\") FROM \"get_activity\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "WAN",
           "refId": "B",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -643,7 +619,7 @@
       "title": "Transcoding",
       "id": 11,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -687,62 +663,57 @@
       },
       "targets": [
         {
-          "expr": "tautulli_sessions_hw_encode{db=\"$db\"}",
-          "legendFormat": "Hardware encode",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"hw_encode\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Hardware encode",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_sw_video_transcode{db=\"$db\"}",
-          "legendFormat": "Software video transcode",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"sw_video_transcode\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Software video transcode",
           "refId": "B",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_audio_only_transcode{db=\"$db\"}",
-          "legendFormat": "Audio only",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"audio_only_transcode\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Audio only",
           "refId": "C",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_subtitle_burn{db=\"$db\"}",
-          "legendFormat": "Subtitle burn-in",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"subtitle_burn\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Subtitle burn-in",
           "refId": "D",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_hdr_video_transcode{db=\"$db\"}",
-          "legendFormat": "HDR video transcode",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"hdr_video_transcode\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "HDR video transcode",
           "refId": "E",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -753,7 +724,7 @@
       "title": "Slowest transcode speed",
       "id": 12,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -806,14 +777,13 @@
       },
       "targets": [
         {
-          "expr": "tautulli_sessions_min_transcode_speed{db=\"$db\"}",
-          "legendFormat": "Speed",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"min_transcode_speed\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Speed",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -825,7 +795,7 @@
       "title": "Streams by platform",
       "id": 13,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -869,14 +839,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (platform) (tautulli_sessions_by_platform_streams{db=\"$db\"})",
-          "legendFormat": "{{platform}}",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams\") FROM \"tautulli_sessions_by_platform\" WHERE $timeFilter GROUP BY time($__interval), \"platform\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_platform",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -887,7 +856,7 @@
       "title": "Streams by quality profile",
       "id": 14,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -931,14 +900,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (quality_profile) (tautulli_sessions_by_quality_streams{db=\"$db\"})",
-          "legendFormat": "{{quality_profile}}",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams\") FROM \"tautulli_sessions_by_quality\" WHERE $timeFilter GROUP BY time($__interval), \"quality_profile\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_quality_profile",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -949,7 +917,7 @@
       "title": "Stream state",
       "id": 15,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -993,50 +961,46 @@
       },
       "targets": [
         {
-          "expr": "tautulli_sessions_streams_playing{db=\"$db\"}",
-          "legendFormat": "Playing",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams_playing\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Playing",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_streams_paused{db=\"$db\"}",
-          "legendFormat": "Paused",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams_paused\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Paused",
           "refId": "B",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_streams_buffering{db=\"$db\"}",
-          "legendFormat": "Buffering",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams_buffering\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Buffering",
           "refId": "C",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         },
         {
-          "expr": "tautulli_sessions_streams_wan{db=\"$db\"}",
-          "legendFormat": "Remote (WAN)",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams_wan\") FROM \"tautulli_sessions\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "Remote (WAN)",
           "refId": "D",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -1060,7 +1024,7 @@
       "title": "Items per library",
       "id": 17,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1103,14 +1067,13 @@
       },
       "targets": [
         {
-          "expr": "max by (section_name) (get_libraries_count{db=\"$db\"})",
-          "legendFormat": "{{section_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT last(\"count\") FROM \"get_libraries\" WHERE $timeFilter GROUP BY \"section_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_section_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -1121,7 +1084,7 @@
       "title": "Plays in time range",
       "id": 18,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1164,26 +1127,25 @@
       },
       "targets": [
         {
-          "expr": "sum by (section_name) (increase(tautulli_library_stats_plays{db=\"$db\"}[$__range]))",
-          "legendFormat": "{{section_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT spread(\"plays\") FROM \"tautulli_library_stats\" WHERE $timeFilter GROUP BY \"section_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_section_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
       ],
-      "description": "Plays per library over the dashboard's time range, from the lifetime play counters."
+      "description": "From the lifetime counters, over the dashboard's time range."
     },
     {
       "type": "bargauge",
       "title": "Hours watched in time range",
       "id": 19,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1227,18 +1189,18 @@
       },
       "targets": [
         {
-          "expr": "sum by (section_name) (increase(tautulli_library_stats_duration{db=\"$db\"}[$__range])) / 3600",
-          "legendFormat": "{{section_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT spread(\"duration\") / 3600 FROM \"tautulli_library_stats\" WHERE $timeFilter GROUP BY \"section_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_section_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
-      ]
+      ],
+      "description": "From the lifetime counters, over the dashboard's time range."
     },
     {
       "type": "row",
@@ -1258,7 +1220,7 @@
       "title": "Streams by user",
       "id": 21,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1302,26 +1264,25 @@
       },
       "targets": [
         {
-          "expr": "sum by (friendly_name) (tautulli_user_activity_streams{db=\"$db\"}) > 0",
-          "legendFormat": "{{friendly_name}}",
-          "range": true,
-          "instant": false,
-          "editorMode": "code",
+          "query": "SELECT last(\"streams\") FROM \"tautulli_user_activity\" WHERE $timeFilter AND \"streams\" > 0 GROUP BY time($__interval), \"friendly_name\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_friendly_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
       ],
-      "description": "Users who are streaming; idle users are written as 0 and hidden here."
+      "description": "Users who are streaming; idle users are hidden."
     },
     {
       "type": "bargauge",
       "title": "Plays by user in time range",
       "id": 22,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1364,14 +1325,13 @@
       },
       "targets": [
         {
-          "expr": "sort_desc(sum by (friendly_name) (increase(tautulli_user_stats_plays{db=\"$db\"}[$__range])) > 0)",
-          "legendFormat": "{{friendly_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT \"v\" FROM (SELECT spread(\"plays\") AS \"v\" FROM \"tautulli_user_stats\" WHERE $timeFilter GROUP BY \"friendly_name\") WHERE \"v\" > 0 GROUP BY \"friendly_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_friendly_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -1382,7 +1342,7 @@
       "title": "Hours watched by user in time range",
       "id": 23,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1426,14 +1386,13 @@
       },
       "targets": [
         {
-          "expr": "sort_desc(sum by (friendly_name) (increase(tautulli_user_stats_duration{db=\"$db\"}[$__range])) / 3600 > 0)",
-          "legendFormat": "{{friendly_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT \"v\" FROM (SELECT spread(\"duration\") / 3600 AS \"v\" FROM \"tautulli_user_stats\" WHERE $timeFilter GROUP BY \"friendly_name\") WHERE \"v\" > 0 GROUP BY \"friendly_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_friendly_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -1444,7 +1403,7 @@
       "title": "Lifetime plays by user",
       "id": 24,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1487,25 +1446,24 @@
       },
       "targets": [
         {
-          "expr": "topk(15, max by (friendly_name) (last_over_time(tautulli_user_stats_plays{db=\"$db\"}[15m])))",
-          "legendFormat": "{{friendly_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT last(\"plays\") FROM \"tautulli_user_stats\" WHERE $timeFilter GROUP BY \"friendly_name\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_friendly_name",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
       ]
     },
     {
-      "type": "bargauge",
-      "title": "Days since last seen",
+      "type": "table",
+      "title": "Last seen",
       "id": 25,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1516,56 +1474,71 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "d",
-          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "orange",
-                "value": 30
-              },
-              {
-                "color": "red",
-                "value": 90
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
           ],
-          "fields": "",
-          "values": false
+          "fields": ""
         },
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "left",
-        "sizing": "auto",
-        "minVizHeight": 16,
-        "maxVizHeight": 24
+        "sortBy": [
+          {
+            "displayName": "Last seen",
+            "desc": true
+          }
+        ]
       },
       "targets": [
         {
-          "expr": "sort((time() - max by (friendly_name) (last_over_time(tautulli_user_stats_last_seen{db=\"$db\"}[15m]))) / 86400)",
-          "legendFormat": "{{friendly_name}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT last(\"last_seen\") * 1000 AS \"Last seen\" FROM \"tautulli_user_stats\" WHERE $timeFilter GROUP BY \"friendly_name\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": "",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "friendly_name": "User"
+            }
           }
         }
       ]
@@ -1575,7 +1548,7 @@
       "title": "Lifetime plays by media type (hourly)",
       "id": 26,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1625,14 +1598,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (media_type) (last_over_time(tautulli_user_plays_by_media_type_plays{db=\"$db\"}[2h])) > 0",
-          "legendFormat": "{{media_type}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT sum(\"v\") FROM (SELECT last(\"plays\") AS \"v\" FROM \"tautulli_user_plays_by_media_type\" WHERE $timeFilter GROUP BY \"user_id\", \"media_type\") GROUP BY \"media_type\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_media_type",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }
@@ -1643,7 +1615,7 @@
       "title": "Lifetime sessions by stream type (hourly)",
       "id": 27,
       "datasource": {
-        "type": "prometheus",
+        "type": "influxdb",
         "uid": "${datasource}"
       },
       "gridPos": {
@@ -1693,14 +1665,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (stream_type) (last_over_time(tautulli_user_sessions_by_stream_type_sessions{db=\"$db\"}[2h]))",
-          "legendFormat": "{{stream_type}}",
-          "range": false,
-          "instant": true,
-          "editorMode": "code",
+          "query": "SELECT sum(\"v\") FROM (SELECT last(\"sessions\") AS \"v\" FROM \"tautulli_user_sessions_by_stream_type\" WHERE $timeFilter GROUP BY \"user_id\", \"stream_type\") GROUP BY \"stream_type\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_stream_type",
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
+            "type": "influxdb",
             "uid": "${datasource}"
           }
         }

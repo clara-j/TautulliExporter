@@ -1,6 +1,9 @@
+import contextlib
 import http.server
+import io
 import json
 import os
+import tempfile
 import sys
 import threading
 import unittest
@@ -9,6 +12,18 @@ import urllib.parse
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 import tautulli_exporter as te  # noqa: E402
+import time  # noqa: E402
+
+_HEARTBEAT_DIR = tempfile.TemporaryDirectory()
+
+
+def setUpModule():
+    # Every test that runs the exporter would otherwise stamp the real /tmp heartbeat.
+    te.HEARTBEAT_FILE = os.path.join(_HEARTBEAT_DIR.name, "heartbeat")
+
+
+def tearDownModule():
+    _HEARTBEAT_DIR.cleanup()
 
 
 def session(**overrides):
@@ -324,6 +339,63 @@ class ConfigTests(unittest.TestCase):
         text = te.one_line(ValueError("GET http://x/api/v2?apikey=SECRET123&cmd=get_activity failed"))
         self.assertNotIn("SECRET123", text)
         self.assertIn("apikey=***", text)
+
+
+class HealthcheckTests(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.saved = te.HEARTBEAT_FILE
+        te.HEARTBEAT_FILE = os.path.join(self.dir.name, "heartbeat")
+
+    def tearDown(self):
+        te.HEARTBEAT_FILE = self.saved
+        self.dir.cleanup()
+
+    def check(self, env=None):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = te.healthcheck(env or {})
+        return code, out.getvalue()
+
+    def stamp(self, seconds_ago):
+        with open(te.HEARTBEAT_FILE, "w") as f:
+            f.write(repr(time.time() - seconds_ago))
+
+    def test_no_heartbeat_is_unhealthy(self):
+        self.assertEqual(self.check()[0], 1)
+
+    def test_fresh_and_stale(self):
+        self.stamp(10)
+        self.assertEqual(self.check(), (0, "healthy: last successful write 10s ago\n"))
+        self.stamp(100)  # default INTERVAL 30: limit 90s
+        code, text = self.check()
+        self.assertEqual(code, 1)
+        self.assertIn("limit 90s", text)
+        self.assertEqual(self.check({"INTERVAL": "60"})[0], 0)  # limit 180s
+
+    def test_bad_interval_or_file_is_unhealthy(self):
+        self.stamp(1)
+        self.assertEqual(self.check({"INTERVAL": "ten"})[0], 1)
+        with open(te.HEARTBEAT_FILE, "w") as f:
+            f.write("garbage")
+        self.assertEqual(self.check()[0], 1)
+
+    def test_main_healthcheck_needs_no_other_settings(self):
+        self.stamp(1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(te.main(["--healthcheck"], env={}), 0)
+
+    def test_activity_success_writes_heartbeat_failure_does_not(self):
+        te.Exporter(config(), FakeTautulli(responses()), FakeWriter()).run(once=True)
+        self.assertEqual(self.check()[0], 0)
+        os.remove(te.HEARTBEAT_FILE)
+        broken = responses(get_activity=te.TautulliError("down"))
+        te.Exporter(config(), FakeTautulli(broken), FakeWriter()).run(once=True)
+        self.assertFalse(os.path.exists(te.HEARTBEAT_FILE))
+
+    def test_unwritable_heartbeat_does_not_raise(self):
+        te.HEARTBEAT_FILE = os.path.join(self.dir.name, "missing-dir", "heartbeat")
+        te.write_heartbeat()
 
 
 class StubHandler(http.server.BaseHTTPRequestHandler):
